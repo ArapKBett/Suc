@@ -17,7 +17,3 @@ log = "0.4.22"
 # Explicitly pin base64ct to a compatible version
 [dependencies.base64ct]
 version = "1.6.0"
-
-# Patch to override base64ct for all dependencies, specifying exact version
-[patch.crates-io]
-base64ct = { version = "=1.6.0" }  # Use exact version to resolve ambiguity
