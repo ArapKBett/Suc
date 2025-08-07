@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
+    commitment_config::CommitmentConfig,
     pubkey::Pubkey,
     signature::Signature,
 };
-use spl_token::instruction::TokenInstruction;
+use spl_token::state::Account as TokenAccount;
 use std::str::FromStr;
 
 use crate::models::{Transfer, TransferType};
@@ -20,7 +21,7 @@ pub async fn index_usdc_transfers(
     let usdc_mint_pubkey = Pubkey::from_str(usdc_mint)?;
     
     let signatures = client
-        .get_signatures_for_address(&wallet_pubkey)
+        .get_signatures_for_address(&wallet_pubkey, None, CommitmentConfig::confirmed())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
     
     let mut transfers = Vec::new();
@@ -29,7 +30,7 @@ pub async fn index_usdc_transfers(
         let signature = Signature::from_str(&sig_info.signature)?;
         let block_time = sig_info
             .block_time
-            .map(|t| DateTime::<Utc>::from_utc(chrono::NaiveDateTime::from_timestamp(t, 0)));
+            .map(|t| Utc.from_utc_datetime(&chrono::NaiveDateTime::from_timestamp_opt(t, 0).unwrap()));
         
         if let Some(tx_time) = block_time {
             if tx_time < start_time || tx_time > end_time {
@@ -37,48 +38,41 @@ pub async fn index_usdc_transfers(
             }
             
             let tx = client
-                .get_transaction(&signature, solana_sdk::commitment_config::CommitmentConfig::confirmed())
+                .get_transaction(&signature, CommitmentConfig::confirmed())
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             
-            let transaction = tx.transaction.transaction;
             if let Some(meta) = tx.transaction.meta {
-                let inner_instructions = meta.inner_instructions.unwrap_or_default();
+                let pre_balances = meta.pre_token_balances.unwrap_or_default();
+                let post_balances = meta.post_token_balances.unwrap_or_default();
                 
-                for instr in transaction.message.instructions.iter().chain(
-                    inner_instructions
-                        .iter()
-                        .flat_map(|i| i.instructions.iter()),
-                ) {
-                    if let Ok(token_instr) = spl_token::instruction::decode(&instr.data) {
-                        if let TokenInstruction::Transfer { amount } = token_instr {
-                            let accounts = instr.accounts;
-                            if accounts.len() < 3 {
-                                continue;
-                            }
-                            
-                            let source = transaction.message.account_keys[accounts[0] as usize];
-                            let destination = transaction.message.account_keys[accounts[1] as usize];
-                            let mint = transaction.message.account_keys[accounts[2] as usize];
-                            
-                            if mint != usdc_mint_pubkey {
-                                continue;
-                            }
-                            
-                            let transfer_type = if source == wallet_pubkey {
+                for (pre, post) in pre_balances.iter().zip(post_balances.iter()) {
+                    if pre.mint != usdc_mint_pubkey.to_string() || post.mint != usdc_mint_pubkey.to_string() {
+                        continue;
+                    }
+                    
+                    let pre_amount = pre.ui_token_amount.ui_amount.unwrap_or(0.0);
+                    let post_amount = post.ui_token_amount.ui_amount.unwrap_or(0.0);
+                    
+                    if pre_amount != post_amount {
+                        let owner = Pubkey::from_str(&pre.owner)?;
+                        let transfer_type = if owner == wallet_pubkey {
+                            if pre_amount > post_amount {
                                 TransferType::Sent
-                            } else if destination == wallet_pubkey {
-                                TransferType::Received
                             } else {
-                                continue;
-                            };
-                            
-                            transfers.push(Transfer {
-                                date: tx_time,
-                                amount: amount as f64 / 1_000_000.0, // USDC has 6 decimals
-                                transfer_type,
-                                signature: signature.to_string(),
-                            });
-                        }
+                                TransferType::Received
+                            }
+                        } else {
+                            continue;
+                        };
+                        
+                        let amount = (post_amount - pre_amount).abs();
+                        
+                        transfers.push(Transfer {
+                            date: tx_time,
+                            amount,
+                            transfer_type,
+                            signature: signature.to_string(),
+                        });
                     }
                 }
             }
