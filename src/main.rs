@@ -1,6 +1,6 @@
 use actix_web::{App, HttpServer};
 use chrono::{Duration, Utc};
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient; // Use nonblocking RpcClient
 use std::env;
 
 mod indexer;
@@ -33,6 +33,7 @@ async fn main() -> std::io::Result<()> {
             .route("/transfers", actix_web::web::get().to(get_transfers))
     })
     .bind(("0.0.0.0", 8080))?
+    .workers(4) // Use multiple workers for multi-threaded runtime
     .run()
     .await
 }
