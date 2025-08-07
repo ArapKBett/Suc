@@ -3,7 +3,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Signature,
-    transaction::Transaction,
+    commitment_config::CommitmentConfig,
 };
 use spl_token::instruction::TokenInstruction;
 use std::str::FromStr;
@@ -21,7 +21,7 @@ pub async fn index_usdc_transfers(
     let usdc_mint_pubkey = Pubkey::from_str(usdc_mint)?;
     
     let signatures = client
-        .get_signatures_for_address(&wallet_pubkey)
+        .get_signatures_for_address(&wallet_pubkey, None, CommitmentConfig::confirmed())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
     
     let mut transfers = Vec::new();
@@ -38,11 +38,11 @@ pub async fn index_usdc_transfers(
             }
             
             let tx = client
-                .get_transaction(&signature, solana_sdk::commitment_config::CommitmentConfig::confirmed())
+                .get_transaction(&signature, CommitmentConfig::confirmed())
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             
-            let transaction = tx.transaction.transaction;
             if let Some(meta) = tx.transaction.meta {
+                let transaction = tx.transaction.transaction;
                 let inner_instructions = meta.inner_instructions.unwrap_or_default();
                 
                 for instr in transaction.message.instructions.iter().chain(
@@ -52,7 +52,7 @@ pub async fn index_usdc_transfers(
                 ) {
                     if let Ok(token_instr) = spl_token::instruction::decode(&instr.data) {
                         if let TokenInstruction::Transfer { amount } = token_instr {
-                            let accounts = instr.accounts;
+                            let accounts = &instr.accounts;
                             if accounts.len() < 3 {
                                 continue;
                             }
@@ -87,4 +87,4 @@ pub async fn index_usdc_transfers(
     }
     
     Ok(transfers)
-                          }
+                         }
