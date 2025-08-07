@@ -1,6 +1,8 @@
 FROM rust:1.80 AS builder
 WORKDIR /usr/src/solana-usdc-indexer
 COPY . .
+# Clear Cargo cache to avoid stale dependencies
+RUN rm -rf /usr/local/cargo/registry
 RUN cargo build --release
 
 FROM rust:1.80-slim
