@@ -1,6 +1,6 @@
-use actix_web::{App, HttpServer};
+use actix_web::{App, HttpServer, HttpResponse, Responder, web};
 use chrono::{Duration, Utc};
-use solana_client::nonblocking::rpc_client::RpcClient; // Use nonblocking RpcClient
+use solana_client::nonblocking::rpc_client::RpcClient;
 use std::env;
 
 mod indexer;
@@ -9,6 +9,12 @@ mod web;
 
 use indexer::index_usdc_transfers;
 use web::get_transfers;
+
+async fn root() -> impl Responder {
+    HttpResponse::TemporaryRedirect()
+        .append_header(("Location", "/transfers"))
+        .finish()
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -30,10 +36,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(actix_web::web::Data::new(transfers.clone()))
-            .route("/transfers", actix_web::web::get().to(get_transfers))
+            .route("/", web::get().to(root)) // Add root route
+            .route("/transfers", web::get().to(get_transfers))
     })
     .bind(("0.0.0.0", 8080))?
-    .workers(4) // Use multiple workers for multi-threaded runtime
+    .workers(4)
     .run()
     .await
 }
