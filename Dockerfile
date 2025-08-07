@@ -1,7 +1,9 @@
 FROM rustlang/rust:nightly AS builder
 WORKDIR /usr/src/solana-usdc-indexer
 COPY . .
+# Verify Cargo version
 RUN cargo --version
+# Clear Cargo cache and update lockfile
 RUN rm -rf /usr/local/cargo/registry
 RUN cargo update
 RUN cargo build --release
