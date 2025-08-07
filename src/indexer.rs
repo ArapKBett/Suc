@@ -1,11 +1,13 @@
 use chrono::{DateTime, Utc};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
     pubkey::Pubkey,
     signature::Signature,
 };
-use spl_token::state::Account as TokenAccount;
+use solana_transaction_status::{
+    EncodedConfirmedTransactionWithStatusMeta,
+    UiTransactionEncoding,
+};
 use std::str::FromStr;
 
 use crate::models::{Transfer, TransferType};
@@ -21,7 +23,7 @@ pub async fn index_usdc_transfers(
     let usdc_mint_pubkey = Pubkey::from_str(usdc_mint)?;
     
     let signatures = client
-        .get_signatures_for_address(&wallet_pubkey, None, CommitmentConfig::confirmed())
+        .get_signatures_for_address(&wallet_pubkey)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
     
     let mut transfers = Vec::new();
@@ -38,12 +40,12 @@ pub async fn index_usdc_transfers(
             }
             
             let tx = client
-                .get_transaction(&signature, CommitmentConfig::confirmed())
+                .get_transaction(&signature, UiTransactionEncoding::JsonParsed)
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             
             if let Some(meta) = tx.transaction.meta {
-                let pre_balances = meta.pre_token_balances.unwrap_or_default();
-                let post_balances = meta.post_token_balances.unwrap_or_default();
+                let pre_balances = meta.pre_token_balances.unwrap_or(vec![]);
+                let post_balances = meta.post_token_balances.unwrap_or(vec![]);
                 
                 for (pre, post) in pre_balances.iter().zip(post_balances.iter()) {
                     if pre.mint != usdc_mint_pubkey.to_string() || post.mint != usdc_mint_pubkey.to_string() {
