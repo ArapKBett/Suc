@@ -1,12 +1,10 @@
 use chrono::{DateTime, Utc, TimeZone};
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient; // Use nonblocking RpcClient
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Signature,
 };
-use solana_transaction_status::{
-    UiTransactionEncoding,
-};
+use solana_transaction_status::UiTransactionEncoding;
 use std::str::FromStr;
 
 use crate::models::{Transfer, TransferType};
@@ -23,6 +21,7 @@ pub async fn index_usdc_transfers(
     
     let signatures = client
         .get_signatures_for_address(&wallet_pubkey)
+        .await
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
     
     let mut transfers = Vec::new();
@@ -31,7 +30,7 @@ pub async fn index_usdc_transfers(
         let signature = Signature::from_str(&sig_info.signature)?;
         let block_time = sig_info
             .block_time
-            .map(|t| Utc.timestamp_opt(t, 0).single().ok_or("Invalid timestamp")) // Use timestamp_opt
+            .map(|t| Utc.timestamp_opt(t, 0).single().ok_or("Invalid timestamp"))
             .transpose()
             .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
         
@@ -42,6 +41,7 @@ pub async fn index_usdc_transfers(
             
             let tx = client
                 .get_transaction(&signature, UiTransactionEncoding::JsonParsed)
+                .await
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             
             if let Some(meta) = tx.transaction.meta {
