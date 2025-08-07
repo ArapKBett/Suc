@@ -9,25 +9,6 @@ struct TransferResponse {
 }
 
 pub async fn get_transfers(transfers: web::Data<Vec<Transfer>>) -> impl Responder {
-    let table_content = if transfers.is_empty() {
-        "<tr><td colspan=\"4\">No USDC transfers found in the last 7 days.</td></tr>".to_string()
-    } else {
-        transfers
-            .iter()
-            .map(|t| {
-                let type_str = match t.transfer_type {
-                    TransferType::Sent => "Sent".to_string(),
-                    TransferType::Received => "Received".to_string(),
-                };
-                format!(
-                    "<tr><td>{}</td><td>{:.6}</td><td>{}</td><td><a href=\"https://explorer.solana.com/tx/{}\">{}</a></td></tr>",
-                    t.date, t.amount, type_str, t.signature, t.signature
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-
     let html = format!(
         r#"
         <!DOCTYPE html>
@@ -54,7 +35,20 @@ pub async fn get_transfers(transfers: web::Data<Vec<Transfer>>) -> impl Responde
         </body>
         </html>
         "#,
-        table_content
+        transfers
+            .iter()
+            .map(|t| {
+                let type_str = match t.transfer_type {
+                    TransferType::Sent => "Sent".to_string(),
+                    TransferType::Received => "Received".to_string(),
+                };
+                format!(
+                    "<tr><td>{}</td><td>{:.6}</td><td>{}</td><td><a href=\"https://explorer.solana.com/tx/{}\">{}</a></td></tr>",
+                    t.date, t.amount, type_str, t.signature, t.signature
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
     );
     HttpResponse::Ok().content_type("text/html").body(html)
 }
