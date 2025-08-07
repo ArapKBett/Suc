@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::Serialize;
 
-use crate::models::Transfer;
+use crate::models::{Transfer, TransferType};
 
 #[derive(Serialize)]
 struct TransferResponse {
@@ -37,10 +37,16 @@ pub async fn get_transfers(transfers: web::Data<Vec<Transfer>>) -> impl Responde
         "#,
         transfers
             .iter()
-            .map(|t| format!(
-                "<tr><td>{}</td><td>{:.6}</td><td>{:?}</td><td><a href=\"https://explorer.solana.com/tx/{}\">{}</a></td></tr>",
-                t.date, t.amount, t.transfer_type, t.signature, t.signature
-            ))
+            .map(|t| {
+                let type_str = match t.transfer_type {
+                    TransferType::Sent => "Sent".to_string(),
+                    TransferType::Received => "Received".to_string(),
+                };
+                format!(
+                    "<tr><td>{}</td><td>{:.6}</td><td>{}</td><td><a href=\"https://explorer.solana.com/tx/{}\">{}</a></td></tr>",
+                    t.date, t.amount, type_str, t.signature, t.signature
+                )
+            })
             .collect::<Vec<_>>()
             .join("")
     );
