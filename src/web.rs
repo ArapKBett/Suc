@@ -22,7 +22,7 @@ pub async fn get_transfers(transfers: web::Data<Vec<Transfer>>) -> impl Responde
             </style>
         </head>
         <body>
-            <h1>USDC Transfers for Wallet</h1>
+            <h1>USDC Transfers for Wallet 7cMEhpt...xuDDU</h1>
             <table>
                 <tr>
                     <th>Date</th>
@@ -38,8 +38,8 @@ pub async fn get_transfers(transfers: web::Data<Vec<Transfer>>) -> impl Responde
         transfers
             .iter()
             .map(|t| format!(
-                "<tr><td>{}</td><td>{}</td><td>{:?}</td><td>{}</td></tr>",
-                t.date, t.amount, t.transfer_type, t.signature
+                "<tr><td>{}</td><td>{:.6}</td><td>{:?}</td><td><a href=\"https://explorer.solana.com/tx/{}\">{}</a></td></tr>",
+                t.date, t.amount, t.transfer_type, t.signature, t.signature
             ))
             .collect::<Vec<_>>()
             .join("")
