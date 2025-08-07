@@ -8,7 +8,7 @@ use std::env;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     
-    // Solana RPC endpoint (use a public or private mainnet RPC)
+    // Solana RPC endpoint
     let rpc_url = env::var("SOLANA_RPC_URL").unwrap_or("https://api.mainnet-beta.solana.com".to_string());
     let client = RpcClient::new(rpc_url);
     
@@ -36,4 +36,4 @@ async fn main() -> std::io::Result<()> {
     .bind(("0.0.0.0", 8080))?
     .run()
     .await
-  }
+}
