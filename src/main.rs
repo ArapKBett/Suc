@@ -1,8 +1,15 @@
 use actix_web::{App, HttpServer};
 use chrono::{Duration, Utc};
 use solana_client::rpc_client::RpcClient;
-use solana_usdc_indexer::{indexer::index_usdc_transfers, web::get_transfers};
 use std::env;
+
+// Import modules directly from the crate
+mod indexer;
+mod models;
+mod web;
+
+use indexer::index_usdc_transfers;
+use web::get_transfers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
