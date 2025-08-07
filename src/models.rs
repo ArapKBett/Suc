@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Debug)] // Added Debug
+#[derive(Clone, Serialize, Debug)]
 pub enum TransferType {
     Sent,
     Received,
