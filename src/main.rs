@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     let usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string();
     
     let end_time = Utc::now();
-    let start_time = end_time - Duration::hours(24);
+    let start_time = end_time - Duration::hours(96);
     
     let transfers = index_usdc_transfers(&client, &wallet, &usdc_mint, start_time, end_time)
         .await
